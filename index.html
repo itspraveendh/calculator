@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Work Time & Rate Calculator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+    /* Hide number input spinners for clean look */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white transition-colors duration-200">
+
+  <!-- Navigation / Header -->
+  <header class="w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 leading-tight">RateFlow</h1>
+          <p class="text-xs text-slate-500 font-medium">Freelance & Project Billing Calculator</p>
+        </div>
+      </div>
+      <!-- Currency Selector -->
+      <div class="flex items-center space-x-2">
+        <label for="currencySelect" class="text-xs font-semibold uppercase text-slate-500 hidden sm:inline">Currency</label>
+        <select id="currencySelect" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold rounded-lg px-3 py-1.5 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+          <option value="₹" selected>₹ INR</option>
+          <option value="$">$ USD</option>
+          <option value="€">€ EUR</option>
+          <option value="£">£ GBP</option>
+          <option value="A$">A$ AUD</option>
+          <option value="CA$">CA$ CAD</option>
+          <option value="AED">AED</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 md:py-12">
+    <!-- Notification Toast (Hidden by default) -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2">
+      <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+      </svg>
+      <span id="toastMsg">Copied quote to clipboard!</span>
+    </div>
+
+    <!-- Main Grid Container -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- Left Column: Inputs -->
+      <section class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Project Details</h2>
+          <p class="text-sm text-slate-500 mt-1">Enter your hourly rate and duration worked to instantly calculate charges.</p>
+        </div>
+
+        <form id="calcForm" onsubmit="event.preventDefault();" class="space-y-6">
+          <!-- Hourly Rate Input -->
+          <div>
+            <label for="hourlyRate" class="block text-sm font-medium text-slate-700 mb-2">
+              Hourly Rate (Per 60 Mins)
+            </label>
+            <div class="relative rounded-xl shadow-sm">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                <span id="rateCurrencyPrefix" class="text-slate-400 font-bold text-base">₹</span>
+              </div>
+              <input
+                type="number"
+                id="hourlyRate"
+                min="0"
+                step="any"
+                value="1200"
+                class="block w-full rounded-xl border border-slate-300 py-3 pl-9 pr-14 text-slate-900 placeholder:text-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 text-lg font-semibold tracking-wide transition"
+                placeholder="1200"
+              />
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">/ hr</span>
+              </div>
+            </div>
+            <!-- Quick Chips for Rate -->
+            <div class="flex flex-wrap items-center gap-2 mt-2.5">
+              <span class="text-xs text-slate-400 font-medium mr-1">Presets:</span>
+              <button type="button" class="preset-rate px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition" data-rate="800">800</button>
+              <button type="button" class="preset-rate px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition" data-rate="1200">1,200</button>
+              <button type="button" class="preset-rate px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition" data-rate="2000">2,000</button>
+              <button type="button" class="preset-rate px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition" data-rate="3500">3,500</button>
+            </div>
+          </div>
+
+          <!-- Working Time Section (Hours & Minutes) -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Working Duration
+            </label>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Hours Input -->
+              <div>
+                <div class="relative rounded-xl shadow-sm">
+                  <input
+                    type="number"
+                    id="workHours"
+                    min="0"
+                    step="1"
+                    value="1"
+                    class="block w-full rounded-xl border border-slate-300 py-3 pl-4 pr-14 text-slate-900 placeholder:text-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 text-lg font-semibold tracking-wide transition"
+                    placeholder="1"
+                  />
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Hours</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Minutes Input -->
+              <div>
+                <div class="relative rounded-xl shadow-sm">
+                  <input
+                    type="number"
+                    id="workMinutes"
+                    min="0"
+                    max="59"
+                    step="1"
+                    value="48"
+                    class="block w-full rounded-xl border border-slate-300 py-3 pl-4 pr-14 text-slate-900 placeholder:text-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 text-lg font-semibold tracking-wide transition"
+                    placeholder="48"
+                  />
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Mins</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Duration Increments -->
+            <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
+              <span class="text-xs text-slate-400 font-medium mr-1">Add Mins:</span>
+              <button type="button" class="add-time px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" data-minutes="15">+15m</button>
+              <button type="button" class="add-time px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" data-minutes="30">+30m</button>
+              <button type="button" class="add-time px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" data-minutes="45">+45m</button>
+              <button type="button" class="add-time px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" data-minutes="60">+1h</button>
+              <button type="button" id="resetBtn" class="ml-auto text-xs text-red-600 hover:text-red-700 font-medium underline transition">Reset</button>
+            </div>
+          </div>
+
+          <!-- Total Duration Badge / Helper -->
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between text-sm">
+            <span class="text-slate-600 font-medium">Total Duration in Minutes:</span>
+            <span id="displayTotalMinutes" class="font-bold text-slate-900 bg-white border border-slate-200 px-2.5 py-0.5 rounded-lg shadow-2xs">108 mins</span>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Results & Invoice Breakdown -->
+      <section class="lg:col-span-5 space-y-6">
+        
+        <!-- Primary Total Card -->
+        <div class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-2xl shadow-xl p-6 sm:p-7 relative overflow-hidden">
+          <!-- Background decorative glow -->
+          <div class="absolute -right-8 -top-8 w-36 h-36 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div class="flex items-center justify-between text-indigo-200 text-xs font-semibold uppercase tracking-wider mb-2">
+            <span>Total to Charge</span>
+            <span class="bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-md text-[10px] font-bold">EXACT</span>
+          </div>
+
+          <!-- Huge Price Tag -->
+          <div class="flex items-baseline space-x-1.5 my-3">
+            <span id="resultCurrencySymbol" class="text-3xl sm:text-4xl font-extrabold text-indigo-300">₹</span>
+            <span id="totalCharge" class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white leading-none">2,160</span>
+          </div>
+
+          <p class="text-xs text-indigo-200/80 leading-relaxed mb-6">
+            Calculated at <span id="ratePerMinText" class="font-semibold text-white">₹20.00</span> per minute for <span id="summaryTimeText" class="font-semibold text-white">1 hr 48 min</span>.
+          </p>
+
+          <!-- Copy Button -->
+          <button
+            id="copyQuoteBtn"
+            type="button"
+            class="w-full bg-white hover:bg-slate-100 text-indigo-950 font-bold text-sm py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 active:scale-[0.98]"
+          >
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            <span>Copy Quote Summary</span>
+          </button>
+        </div>
+
+        <!-- Detailed Breakdown & Rounded Suggestions -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span>Breakdown Math</span>
+          </h3>
+
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between items-center py-2 border-b border-slate-100">
+              <span class="text-slate-500">Per Minute Rate</span>
+              <span id="breakdownPerMin" class="font-semibold text-slate-900">₹20.00 / min</span>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-slate-100">
+              <span class="text-slate-500">Decimal Hours</span>
+              <span id="breakdownDecimalHours" class="font-semibold text-slate-900">1.80 hrs</span>
+            </div>
+            <div class="flex justify-between items-center py-2 border-b border-slate-100">
+              <span class="text-slate-500">Total Minutes</span>
+              <span id="breakdownMinutes" class="font-semibold text-slate-900">108 mins</span>
+            </div>
+          </div>
+
+          <!-- Suggested Client Quotes -->
+          <div class="pt-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-2">Quote Friendly Options</span>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200/80 transition text-center cursor-pointer select-quote" id="boxRoundDown">
+                <span class="text-[11px] text-slate-500 font-medium block">Rounded Nearest 50</span>
+                <span id="round50" class="text-base font-bold text-slate-800">₹2,150</span>
+              </div>
+              <div class="p-3 bg-indigo-50/70 hover:bg-indigo-100/70 rounded-xl border border-indigo-200/60 transition text-center cursor-pointer select-quote" id="boxRoundUp">
+                <span class="text-[11px] text-indigo-600 font-medium block">Rounded Nearest 100</span>
+                <span id="round100" class="text-base font-bold text-indigo-900">₹2,200</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <footer class="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 border-t border-slate-200 text-center text-xs text-slate-400">
+    Designed for freelancers, video editors, designers & contractors. Works offline.
+  </footer>
+
+  <script>
+    // DOM Elements
+    const hourlyRateInput = document.getElementById('hourlyRate');
+    const workHoursInput = document.getElementById('workHours');
+    const workMinutesInput = document.getElementById('workMinutes');
+    const currencySelect = document.getElementById('currencySelect');
+    const rateCurrencyPrefix = document.getElementById('rateCurrencyPrefix');
+    const resultCurrencySymbol = document.getElementById('resultCurrencySymbol');
+    
+    // Output Elements
+    const displayTotalMinutes = document.getElementById('displayTotalMinutes');
+    const totalCharge = document.getElementById('totalCharge');
+    const ratePerMinText = document.getElementById('ratePerMinText');
+    const summaryTimeText = document.getElementById('summaryTimeText');
+    const breakdownPerMin = document.getElementById('breakdownPerMin');
+    const breakdownDecimalHours = document.getElementById('breakdownDecimalHours');
+    const breakdownMinutes = document.getElementById('breakdownMinutes');
+    const round50 = document.getElementById('round50');
+    const round100 = document.getElementById('round100');
+    
+    // Buttons & Interactivity
+    const presetButtons = document.querySelectorAll('.preset-rate');
+    const addTimeButtons = document.querySelectorAll('.add-time');
+    const resetBtn = document.getElementById('resetBtn');
+    const copyQuoteBtn = document.getElementById('copyQuoteBtn');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+
+    // Utility: Format numbers with comma separators
+    function formatNumber(num) {
+      if (isNaN(num)) return '0';
+      return Number(num).toLocaleString('en-US', {
+        minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    // Main Calculation Function
+    function calculate() {
+      const currency = currencySelect.value;
+      const hourlyRate = Math.max(0, parseFloat(hourlyRateInput.value) || 0);
+      const hours = Math.max(0, parseInt(workHoursInput.value, 10) || 0);
+      const minutes = Math.max(0, parseInt(workMinutesInput.value, 10) || 0);
+
+      // Calculations
+      const totalMinutes = (hours * 60) + minutes;
+      const decimalHours = totalMinutes / 60;
+      const ratePerMinute = hourlyRate / 60;
+      const rawTotal = (totalMinutes * ratePerMinute);
+
+      // Rounded Quote Options
+      const roundedTo50 = Math.round(rawTotal / 50) * 50;
+      const roundedTo100 = Math.round(rawTotal / 100) * 100;
+
+      // Update Currency Prefixes
+      rateCurrencyPrefix.textContent = currency;
+      resultCurrencySymbol.textContent = currency;
+
+      // Update DOM Text
+      totalCharge.textContent = formatNumber(rawTotal);
+      displayTotalMinutes.textContent = `${totalMinutes} mins`;
+      ratePerMinText.textContent = `${currency}${ratePerMinute.toFixed(2)}`;
+      
+      const hoursLabel = hours === 1 ? '1 hr' : `${hours} hrs`;
+      const minsLabel = `${minutes} min`;
+      summaryTimeText.textContent = hours > 0 ? `${hoursLabel} ${minsLabel}` : minsLabel;
+
+      breakdownPerMin.textContent = `${currency}${ratePerMinute.toFixed(2)} / min`;
+      breakdownDecimalHours.textContent = `${decimalHours.toFixed(2)} hrs`;
+      breakdownMinutes.textContent = `${totalMinutes} mins`;
+
+      round50.textContent = `${currency}${formatNumber(roundedTo50)}`;
+      round100.textContent = `${currency}${formatNumber(roundedTo100)}`;
+    }
+
+    // Currency Change Listener
+    currencySelect.addEventListener('change', calculate);
+
+    // Live Input Listeners
+    [hourlyRateInput, workHoursInput, workMinutesInput].forEach(input => {
+      input.addEventListener('input', calculate);
+    });
+
+    // Preset Rate Buttons
+    presetButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        hourlyRateInput.value = btn.getAttribute('data-rate');
+        calculate();
+      });
+    });
+
+    // Add Minutes Buttons
+    addTimeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const addMins = parseInt(btn.getAttribute('data-minutes'), 10) || 0;
+        let currentTotalMins = (parseInt(workHoursInput.value || 0, 10) * 60) + parseInt(workMinutesInput.value || 0, 10);
+        currentTotalMins += addMins;
+
+        workHoursInput.value = Math.floor(currentTotalMins / 60);
+        workMinutesInput.value = currentTotalMins % 60;
+        calculate();
+      });
+    });
+
+    // Reset Form
+    resetBtn.addEventListener('click', () => {
+      hourlyRateInput.value = '1200';
+      workHoursInput.value = '1';
+      workMinutesInput.value = '48';
+      calculate();
+      showToast('Values reset to initial default.');
+    });
+
+    // Show Toast Notification
+    function showToast(message) {
+      toastMsg.textContent = message;
+      toast.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+
+    copyQuoteBtn.addEventListener('click', () => {
+      const currency = currencySelect.value;
+      const rate = hourlyRateInput.value;
+      const h = workHoursInput.value || 0;
+      const m = workMinutesInput.value || 0;
+      const total = totalCharge.textContent;
+      const perMin = (rate / 60).toFixed(2);
+
+      const quoteText = `Billing Breakdown:
+• Rate: ${currency}${rate}/hr (${currency}${perMin}/min)
+• Work Time: ${h}h ${m}m (${(parseInt(h)*60 + parseInt(m))} mins)
+• Total Charge: ${currency}${total}`;
+
+      // Clipboard fallback support for iframe sandboxing
+      const textarea = document.createElement('textarea');
+      textarea.value = quoteText;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('Quote copied to clipboard!');
+        } else {
+          showToast('Failed to copy.');
+        }
+      } catch (err) {
+        showToast('Unable to copy quote.');
+      }
+      document.body.removeChild(textarea);
+    });
+
+    // Initial Calculation on Page Load
+    calculate();
+  </script>
+</body>
+</html>
